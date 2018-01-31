@@ -5,7 +5,7 @@
 using namespace std;
 using namespace boost;
 
-typedef adjacency_list<vecS, vecS, directedS,
+typedef adjacency_list<vecS, vecS, undirectedS,
 	no_property,
 	property<edge_weight_t, int>
 	> Graph;
