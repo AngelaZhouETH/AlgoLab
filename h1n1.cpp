@@ -1,34 +1,19 @@
 #include <iostream>
+#include <vector>
+#include <map>
+#include <queue>
+
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_2.h>
 
+
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Delaunay_triangulation_2<K>  Triangulation;
+typedef Triangulation::All_faces_iterator  Face_iterator;
 typedef Triangulation::Face_handle Face_handle;
 
 using namespace std;
 
-map<Face_handle, int> is_visited;
-bool dfs(Face_handle f, Triangulation& t, double d) {
-	is_visited[f] = 1;
-	if (t.is_infinite(f))
-		return true;
-	else {
-		int x[3], y[3];
-		for (int i = 0; i < 3; i++) {
-			x[i] = f->vertex(i)->point().x();
-			y[i] = f->vertex(i)->point().y();
-		}
-		for (int i = 0; i < 3; i++) {
-			if (is_visited[f->neighbor(i)] != 1) {
-				if (pow(x[(i+1)%3]-x[(i+2)%3], 2) + pow(y[(i+1)%3]-y[(i+2)%3], 2) >= 4*d) {
-					if ( dfs(f->neighbor(i), t, d) ) return true;
-				}
-			}
-		}
-		return false;
-	}
-}
 
 void h1n1(int n) {
 	int x, y;
@@ -37,27 +22,58 @@ void h1n1(int n) {
 		cin >> x >> y;
 		pts[i] = K::Point_2(x, y);
 	}
-	Triangulation t;
-	t.insert(pts.begin(), pts.end());
+
+	Triangulation tri;
+	tri.insert(pts.begin(), pts.end());
+
+
+	queue<Face_handle> q;
+	for (Face_iterator f = tri.all_faces_begin(); f != tri.all_faces_end(); ++f) {
+		if (tri.is_infinite(f)) {
+			q.push(f);
+		}
+	}
+
+	Face_handle f;
+	K::Point_2 p1, p2;
+	long dsquare;
+	map<Face_handle, long> wide;
+	while (!q.empty()) {
+		f = q.front();
+		q.pop();
+		for (int i = 0; i < 3; i++) {
+			if (!tri.is_infinite(f->neighbor(i))) {
+				p1 = f->vertex((i+1)%3)->point();
+				p2 = f->vertex((i+2)%3)->point();
+				dsquare = (p1.x() - p2.x()) * (p1.x() - p2.x()) + (p1.y() - p2.y()) * (p1.y() - p2.y());
+				if (!tri.is_infinite(f)) dsquare = min(dsquare, wide[f]);
+				if (wide.find(f->neighbor(i)) == wide.end() || wide[f->neighbor(i)] < dsquare) {
+					wide[f->neighbor(i)] = dsquare;
+					q.push(f->neighbor(i));
+				}
+			}
+		}
+	}
+
 	int m;
 	cin >> m;
-	double d;
-	K::Point_2 new_p, p;
-	Face_handle f;
+	long d;
+	Face_handle f2;
 	for (int i = 0; i < m; i++) {
-		is_visited.clear();
 		cin >> x >> y >> d;
-		new_p = K::Point_2(x, y);
-		p = t.nearest_vertex(new_p)->point();
-		if (pow(x-p.x(), 2)+pow(y-p.y(), 2)<d) {
+		p1 = K::Point_2(x, y);
+		p2 = tri.nearest_vertex(p1)->point();
+		dsquare = (p1.x() - p2.x()) * (p1.x() - p2.x()) + (p1.y() - p2.y()) * (p1.y() - p2.y());
+
+		if (dsquare >= d ){
+			f2 = tri.locate(p1);
+			if (tri.is_infinite(f2) || wide[f2] >= 4*d)
+				cout << 'y';
+			else
+				cout << 'n';
+		} else {
 			cout << 'n';
-			continue;
 		}
-		f = t.locate(new_p);
-		if (dfs(f, t, d))
-			cout << 'y';
-		else
-			cout << 'n';
 	}
 	cout << endl;
 }
